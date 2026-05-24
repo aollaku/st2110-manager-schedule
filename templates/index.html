@@ -1,0 +1,1675 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ST-2110 Schedule Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root {
+    --bg: #090d12;
+    --panel: #111a24;
+    --panel2: #172333;
+    --line: #2b3a4d;
+    --text: #eaf2fb;
+    --muted: #93a8bd;
+    --accent: #43b7ff;
+    --green: #30d158;
+    --orange: #ffb020;
+    --red: #ff5f57;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+}
+header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: linear-gradient(90deg, #101927, #090d12);
+    border-bottom: 1px solid var(--line);
+    padding: 16px 20px;
+}
+h1 { margin: 0 0 12px; font-size: 22px; }
+.toolbar {
+    display: grid;
+    grid-template-columns: 220px 1fr 100px 130px 130px;
+    gap: 10px;
+}
+input, select, button {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-size: 14px;
+}
+button { cursor: pointer; background: #1b2a3b; }
+button:hover { border-color: var(--accent); }
+.primary { background:#12314a; border-color:#286692; }
+.add { background:#123923; border-color:#207844; }
+.delete { background:#3b1518; border-color:#9b2d35; }
+.status {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 13px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #314155;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+main { padding: 16px 20px; }
+.records {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+    gap: 14px;
+}
+.card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 15px;
+    padding: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.22);
+}
+.card-top {
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    align-items:center;
+    margin-bottom: 12px;
+}
+.cable { font-size: 18px; font-weight: 750; }
+.sheet {
+    color: var(--muted);
+    font-size: 12px;
+    border: 1px solid var(--line);
+    padding: 4px 7px;
+    border-radius: 99px;
+    white-space: nowrap;
+}
+.route {
+    display:grid;
+    grid-template-columns:1fr 32px 1fr;
+    gap:8px;
+}
+.box {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 10px;
+    min-height: 78px;
+    line-height: 1.35;
+}
+.label {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-size: 11px;
+    margin-bottom: 6px;
+}
+.arrow {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color: var(--accent);
+    font-size: 23px;
+}
+.network {
+    margin-top: 10px;
+    padding: 10px;
+    background: #102235;
+    border: 1px solid #24476a;
+    border-radius: 10px;
+    color: #dcecff;
+    font-size: 13px;
+}
+.summary {
+    margin-top: 10px;
+    color: #cbd8e7;
+    font-size: 13px;
+    line-height: 1.4;
+}
+.actions { margin-top: 12px; }
+.empty {
+    border:1px dashed var(--line);
+    border-radius: 12px;
+    color: var(--muted);
+    padding: 28px;
+    text-align:center;
+}
+mark { background:#ffe066; color:#000; border-radius:2px; padding:0 2px; }
+dialog {
+    width: min(1000px, calc(100vw - 28px));
+    border:1px solid var(--line);
+    border-radius:16px;
+    background:var(--panel);
+    color:var(--text);
+    padding:0;
+}
+dialog::backdrop { background: rgba(0,0,0,.72); }
+.modal-head, .modal-foot {
+    padding: 14px 16px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+.modal-foot { border-top:1px solid var(--line); border-bottom:0; justify-content:flex-end; gap:10px; }
+.modal-body { padding:16px; max-height:70vh; overflow:auto; }
+.form-grid {
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+}
+.field label { display:block; color:var(--muted); font-size:12px; margin-bottom:4px; }
+.field input { width:100%; }
+.save { background:#123923; border-color:#207844; }
+.close { background:#392028; border-color:#70414a; }
+@media (max-width: 850px) {
+    .toolbar { grid-template-columns: 1fr; }
+    .records { grid-template-columns: 1fr; }
+    .route { grid-template-columns: 1fr; }
+    .arrow { transform: rotate(90deg); }
+}
+
+.unit-map-shell {
+    display: grid;
+    grid-template-columns: 300px 1fr 300px;
+    gap: 14px;
+}
+.unit-side {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px;
+    max-height: calc(100vh - 175px);
+    overflow: auto;
+}
+.unit-side h3 { margin: 0 0 10px; }
+.unit-detail {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.35;
+}
+.unit-canvas {
+    position: relative;
+    height: 760px;
+    background: #06101a;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+}
+.unit-canvas.dragging { cursor: grabbing; }
+#unitSvg {
+    width: 100%;
+    height: 760px;
+    display: block;
+    touch-action: none;
+}
+.unit-controls {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+    display: flex;
+    gap: 6px;
+}
+.unit-controls button { padding: 6px 10px; }
+.unit-help {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    z-index: 10;
+    background: rgba(17,26,36,.92);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 10px;
+    color: var(--muted);
+    font-size: 12px;
+}
+.u-link { stroke: #42b7ff; stroke-width: 1.5; opacity: .35; fill: none; cursor: pointer; }
+.u-link.active { stroke: #fff; stroke-width: 4; opacity: 1; }
+.u-link.dim { opacity: .06; }
+.u-node { cursor: move; }
+.u-node.source .main { fill: #2ecc71; }
+.u-node.destination .main { fill: #ffb020; }
+.u-node .main { stroke: #fff; stroke-width: 1.5; }
+.u-node .halo { fill: rgba(67,183,255,.12); stroke: rgba(255,255,255,.18); }
+.u-node.selected .main { stroke-width: 4; }
+.u-node.dim { opacity: .2; }
+.u-label { fill: var(--text); font-size: 12px; font-weight: 700; pointer-events: none; }
+.u-count { fill: var(--muted); font-size: 10px; pointer-events: none; }
+@media (max-width: 850px) {
+    .unit-map-shell { grid-template-columns: 1fr; }
+    .unit-side { max-height: 320px; }
+}
+
+
+/* HTML overlay nodes - reliable click/drag */
+#unitNodeLayer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transform-origin: 0 0;
+}
+.html-node {
+    position: absolute;
+    min-width: 80px;
+    max-width: 180px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    border: 2px solid rgba(255,255,255,.85);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    cursor: move;
+    user-select: none;
+    pointer-events: auto;
+    box-shadow: 0 0 14px rgba(0,0,0,.45);
+    transform: translate(-50%, -50%);
+    z-index: 20;
+}
+.html-node.source {
+    background: #159447;
+}
+.html-node.destination {
+    background: #c47a00;
+}
+.html-node.selected {
+    outline: 4px solid #fff;
+    box-shadow: 0 0 22px rgba(255,255,255,.8);
+}
+.html-node.dim {
+    opacity: .22;
+}
+.html-node .small {
+    display: block;
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(255,255,255,.8);
+    margin-top: 2px;
+}
+
+
+.unit-controls { pointer-events: auto !important; z-index: 100 !important; }
+.unit-controls button { pointer-events: auto !important; }
+#unitNodeLayer { z-index: 5; }
+
+
+.ops-panel {
+    display: none;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+.ops-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+}
+.ops-card {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+}
+.ops-card h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+}
+.ops-card .big {
+    font-size: 28px;
+    font-weight: 800;
+}
+.badge {
+    display: inline-block;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 8px;
+    margin: 2px;
+    font-size: 12px;
+    color: var(--text);
+}
+.badge.red { background:#3b1518; border-color:#9b2d35; }
+.badge.green { background:#123923; border-color:#207844; }
+.badge.blue { background:#12314a; border-color:#286692; }
+.badge.orange { background:#3b2b12; border-color:#806224; }
+.ops-list {
+    max-height: 360px;
+    overflow: auto;
+    font-size: 13px;
+    line-height: 1.35;
+}
+.device-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.device-table th, .device-table td {
+    border-bottom: 1px solid var(--line);
+    padding: 7px;
+    text-align: left;
+}
+.status-online { color: #30d158; font-weight: 700; }
+.status-offline { color: #ff5f57; font-weight: 700; }
+.status-no-ip { color: #ffb020; font-weight: 700; }
+
+</style>
+</head>
+<body>
+<header>
+    <h1>ST-2110 Schedule Manager</h1>
+    <div id="authBar" style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:-36px;margin-bottom:10px">
+        <span id="currentUserBadge" class="badge">Loading user...</span>
+        <button id="adminUsersBtn" style="display:none" onclick="openAdminUsers()">Admin Users</button>
+        <button onclick="openChangePassword()">Change Password</button>
+        <button onclick="window.location.href='/logout'">Logout</button>
+    </div>
+    <div class="toolbar">
+        <select id="sheetSelect"><option value="ALL">All sheets</option></select>
+        <input id="searchInput" placeholder="Search cable, source, destination, IP, VLAN, unit, location, port..." autocomplete="off">
+        <button onclick="clearSearch()">Clear</button>
+        <button class="add" onclick="openAdd()">Add Entry</button>
+        <button class="primary" onclick="openUnitMap()">Unit Map</button>
+        <button onclick="openOperationsPanel()">Operations</button>
+        <button onclick="openDevicePanel()">Devices</button>
+        <button onclick="reloadCache()">Reload XLSX</button>
+        <button onclick="downloadWorkbook()">Download</button>
+    </div>
+    <div class="status">
+        <span class="spinner" id="spinner"></span>
+        <span id="statusText">Starting...</span>
+    </div>
+</header>
+
+<main>
+    
+<section id="operationsPanel" class="ops-panel">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px">
+        <h2 style="margin:0">Operations / Validation</h2>
+        <button onclick="openOperationsPanel()">Close</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <select id="flowTypeFilter" onchange="refreshOpsAndData()">
+            <option value="ALL">All flow types</option>
+            <option value="Video">Video</option>
+            <option value="Audio">Audio</option>
+            <option value="ANC">ANC</option>
+            <option value="PTP">PTP</option>
+            <option value="NMOS">NMOS</option>
+            <option value="Control">Control</option>
+            <option value="Unknown">Unknown</option>
+        </select>
+        <input id="vlanFilter" placeholder="Filter VLAN number..." oninput="refreshOpsDebounced()">
+        <button onclick="runValidation()">Run Validation</button>
+        <button onclick="loadFlowSummary()">Flow Summary</button>
+        <button onclick="loadAudit()">Audit Log</button>
+        <button onclick="openNmosConfig()">NMOS Config</button>
+    </div>
+    <div class="ops-grid">
+        <div class="ops-card">
+            <h3>Validation Summary</h3>
+            <div id="validationSummary">Press Run Validation.</div>
+        </div>
+        <div class="ops-card">
+            <h3>Flow / VLAN Summary</h3>
+            <div id="flowSummary">Press Flow Summary.</div>
+        </div>
+        <div class="ops-card">
+            <h3>Audit Log</h3>
+            <div id="auditLog" class="ops-list">Press Audit Log.</div>
+        </div>
+    </div>
+    <div class="ops-card" style="margin-top:12px">
+        <h3>Issues</h3>
+        <div id="validationIssues" class="ops-list"></div>
+    </div>
+</section>
+
+<section id="devicePanel" class="ops-panel">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px">
+        <h2 style="margin:0">Device Database / Live Status</h2>
+        <button onclick="openDevicePanel()">Close</button>
+    </div>
+    <div class="ops-grid">
+        <div class="ops-card">
+            <h3>Add / Update Device</h3>
+            <input id="devName" placeholder="Device name / hostname"><br><br>
+            <input id="devIp" placeholder="Management IP"><br><br>
+            <input id="devVendor" placeholder="Vendor"><br><br>
+            <input id="devRole" placeholder="Role e.g. camera, multiviewer, switch"><br><br>
+            <input id="devSite" placeholder="Site / Area"><br><br>
+            <input id="devPtp" placeholder="PTP domain"><br><br>
+            <input id="devPrimary" placeholder="Primary / Red network"><br><br>
+            <input id="devSecondary" placeholder="Secondary / Blue network"><br><br>
+            <input id="devNotes" placeholder="Notes"><br><br>
+            <button onclick="saveDevice()">Save Device</button>
+            <button onclick="checkDeviceStatus()">Check Status</button>
+        </div>
+        <div class="ops-card">
+            <h3>Devices</h3>
+            <div id="deviceList" class="ops-list">Loading...</div>
+        </div>
+    </div>
+</section>
+
+<dialog id="nmosDialog">
+    <div class="modal-head">
+        <strong>NMOS Configuration</strong>
+        <button class="close" onclick="document.getElementById('nmosDialog').close()">Close</button>
+    </div>
+    <div class="modal-body">
+        <div class="field">
+            <label>IS-04 Registry URL</label>
+            <input id="nmosRegistryUrl" placeholder="http://registry-ip:port/x-nmos/query/v1.3">
+        </div>
+        <br>
+        <div class="field">
+            <label>Notes</label>
+            <input id="nmosNotes" placeholder="NMOS registry notes">
+        </div>
+        <br>
+        <label><input type="checkbox" id="nmosEnabled"> Enable live NMOS discovery later</label>
+        <br><br>
+        <button onclick="saveNmosConfig()">Save NMOS Config</button>
+        <button onclick="previewNmos()">Preview NMOS Status</button>
+        <pre id="nmosPreview" style="white-space:pre-wrap;color:var(--muted)"></pre>
+    </div>
+</dialog>
+
+<section id="unitMap" style="display:none"></section>
+    <section class="records" id="records">
+        <div class="empty">Loading workbook cache. First load can take a few seconds.</div>
+    </section>
+</main>
+
+<dialog id="editor">
+    <div class="modal-head">
+        <strong id="editorTitle">Edit record</strong>
+        <button class="close" onclick="closeEditor()">Close</button>
+    </div>
+    <div class="modal-body">
+        <div class="form-grid" id="formGrid"></div>
+    </div>
+    <div class="modal-foot">
+        <button class="close" onclick="closeEditor()">Cancel</button>
+        <button class="save" onclick="saveCurrentRecord()">Save row</button>
+    </div>
+</dialog>
+
+
+<dialog id="addDialog">
+    <div class="modal-head">
+        <strong>Add New Entry</strong>
+        <button class="close" onclick="closeAdd()">Close</button>
+    </div>
+    <div class="modal-body">
+        <p style="color: var(--muted); margin-top:0">
+            Select a specific sheet first, then fill the same Excel columns as the existing entries.
+        </p>
+        <div class="form-grid" id="addGrid"></div>
+    </div>
+    <div class="modal-foot">
+        <button class="close" onclick="closeAdd()">Cancel</button>
+        <button class="save" onclick="saveNewEntry()">Add Entry</button>
+    </div>
+</dialog>
+
+
+<dialog id="adminUsersDialog">
+    <div class="modal-head">
+        <strong>Admin — User Management</strong>
+        <button class="close" onclick="document.getElementById('adminUsersDialog').close()">Close</button>
+    </div>
+    <div class="modal-body">
+        <div class="ops-card">
+            <h3>Add User</h3>
+            <input id="newUsername" placeholder="Username">
+            <br><br>
+            <input id="newPassword" placeholder="Temporary password" type="password">
+            <br><br>
+            <select id="newUserRole">
+                <option value="read">Read only</option>
+                <option value="write">Read/Write</option>
+                <option value="admin">Admin</option>
+            </select>
+            <br><br>
+            <button onclick="createUser()">Create User</button>
+        </div>
+        <br>
+        <div class="ops-card">
+            <h3>Existing Users</h3>
+            <div id="usersList">Loading...</div>
+        </div>
+    </div>
+</dialog>
+
+<dialog id="changePasswordDialog">
+    <div class="modal-head">
+        <strong>Change Password</strong>
+        <button class="close" onclick="document.getElementById('changePasswordDialog').close()">Close</button>
+    </div>
+    <div class="modal-body">
+        <input id="oldPassword" type="password" placeholder="Old password">
+        <br><br>
+        <input id="newPasswordChange" type="password" placeholder="New password">
+        <br><br>
+        <button onclick="changePassword()">Change Password</button>
+    </div>
+</dialog>
+
+<script>
+let currentRecords = [];
+let currentRecord = null;
+let searchTimer = null;
+let statusTimer = null;
+
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]);
+}
+function highlight(text) {
+    const q = document.getElementById("searchInput").value.trim();
+    let out = escapeHtml(text || "");
+    if (!q) return out;
+    const terms = q.split(/\s+/).filter(Boolean).slice(0, 6);
+    for (const term of terms) {
+        const safe = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        out = out.replace(new RegExp(`(${safe})`, "ig"), "<mark>$1</mark>");
+    }
+    return out;
+}
+function setBusy(text) {
+    document.getElementById("spinner").style.display = "inline-block";
+    document.getElementById("statusText").textContent = text;
+}
+function setReady(text) {
+    document.getElementById("spinner").style.display = "none";
+    document.getElementById("statusText").textContent = text;
+}
+
+async function checkStatus() {
+    const res = await fetch("/api/status");
+    const data = await res.json();
+
+    if (data.error) {
+        setReady("Error: " + data.error);
+        return;
+    }
+
+    if (!data.ready) {
+        setBusy("Building Excel cache... This is only slow on startup.");
+        return;
+    }
+
+    clearInterval(statusTimer);
+    setReady(`Ready — ${data.records} records loaded from ${data.workbook} at ${data.built_at}`);
+    await loadSheets(data.sheets);
+    await loadRecords();
+}
+
+async function loadSheets(sheets) {
+    if (!sheets) {
+        const res = await fetch("/api/sheets");
+        const data = await res.json();
+        sheets = data.sheets || [];
+    }
+    const sel = document.getElementById("sheetSelect");
+    const current = sel.value;
+    sel.innerHTML = `<option value="ALL">All sheets</option>`;
+    sheets.forEach(sheet => {
+        const opt = document.createElement("option");
+        opt.value = sheet;
+        opt.textContent = sheet;
+        sel.appendChild(opt);
+    });
+    sel.value = current || "ALL";
+}
+
+async function loadRecords() {
+    const q = document.getElementById("searchInput").value;
+    const sheet = document.getElementById("sheetSelect").value;
+    setBusy(q ? `Searching "${q}"...` : "Loading records...");
+
+    const url = `/api/records?q=${encodeURIComponent(q)}&sheet=${encodeURIComponent(sheet)}&limit=300`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (res.status === 202 || data.ready === false) {
+        setBusy("Cache still building...");
+        return;
+    }
+
+    currentRecords = data.records || [];
+    renderRecords();
+    setReady(`${data.count} record(s) shown${data.limited ? " — limited to first 300, use search to narrow down" : ""}`);
+}
+
+function renderRecords() {
+    const root = document.getElementById("records");
+    root.innerHTML = "";
+
+    if (!currentRecords.length) {
+        root.innerHTML = `<div class="empty">No result found. Try searching a shorter term, for example only part of the IP, cable number, unit, source or destination.</div>`;
+        return;
+    }
+
+    currentRecords.forEach((r, index) => {
+        const card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = `
+            <div class="card-top">
+                <div class="cable">${highlight(r.cable_id || "Unknown")}</div>
+                <div class="sheet">${escapeHtml(r.sheet)} / Row ${r.row_number}</div>
+            </div>
+            <div class="route">
+                <div class="box">
+                    <div class="label">Source / From</div>
+                    <div>${highlight(r.source || "Not identified")}</div>
+                </div>
+                <div class="arrow">→</div>
+                <div class="box">
+                    <div class="label">Destination / To</div>
+                    <div>${highlight(r.destination || "Not identified")}</div>
+                </div>
+            </div>
+            ${r.network ? `<div class="network">${highlight(r.network)}</div>` : ""}
+            <div class="summary">${highlight(r.summary || "")}</div>
+            <div class="actions"><button onclick="openEditor(${index})">Edit row</button> <button class="delete" onclick="deleteEntry(${index})">Delete</button></div>
+        `;
+        root.appendChild(card);
+    });
+}
+
+function clearSearch() {
+    document.getElementById("searchInput").value = "";
+    loadRecords();
+}
+function downloadWorkbook() {
+    window.location.href = "/download";
+}
+async function reloadCache() {
+    setBusy("Rebuilding cache...");
+    await fetch("/api/reload", {method: "POST"});
+    statusTimer = setInterval(checkStatus, 800);
+}
+
+function openEditor(index) {
+    currentRecord = currentRecords[index];
+    document.getElementById("editorTitle").textContent = `Edit ${currentRecord.cable_id} — ${currentRecord.sheet} row ${currentRecord.row_number}`;
+    const grid = document.getElementById("formGrid");
+    grid.innerHTML = "";
+    const fields = currentRecord.fields || {};
+    const headers = currentRecord.headers || Object.keys(fields);
+
+    headers.forEach(header => {
+        const div = document.createElement("div");
+        div.className = "field";
+        div.innerHTML = `
+            <label>${escapeHtml(header)}</label>
+            <input data-header="${escapeHtml(header)}" value="${escapeHtml(fields[header] || "")}">
+        `;
+        grid.appendChild(div);
+    });
+
+    document.getElementById("editor").showModal();
+}
+function closeEditor() {
+    document.getElementById("editor").close();
+    currentRecord = null;
+}
+async function saveCurrentRecord() {
+    if (!currentRecord) return;
+    const fields = {};
+    document.querySelectorAll("#formGrid input").forEach(input => {
+        fields[input.dataset.header] = input.value;
+    });
+
+    setBusy("Saving row and rebuilding cache...");
+    const url = `/api/record/${encodeURIComponent(currentRecord.sheet)}/${currentRecord.row_number}`;
+    const res = await fetch(url, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({fields})
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+        setReady(data.error || "Save failed");
+        alert(data.error || "Save failed");
+        return;
+    }
+
+    closeEditor();
+    await loadRecords();
+    alert(`Saved. Backup created: ${data.backup}`);
+}
+
+document.getElementById("searchInput").addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => unitMapOpen ? loadUnitGraph() : loadRecords(), 250);
+});
+document.getElementById("sheetSelect").addEventListener("change", () => unitMapOpen ? loadUnitGraph() : loadRecords());
+
+statusTimer = setInterval(checkStatus, 800);
+
+async function openAdd() {
+    const sheet = document.getElementById("sheetSelect").value;
+    if (sheet === "ALL") {
+        alert("Please select a specific sheet first, then press Add Entry.");
+        return;
+    }
+
+    setBusy("Loading sheet headers...");
+    const res = await fetch(`/api/headers/${encodeURIComponent(sheet)}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+        alert(data.error || "Could not load headers");
+        return;
+    }
+
+    const grid = document.getElementById("addGrid");
+    grid.innerHTML = "";
+
+    (data.headers || []).forEach(header => {
+        const div = document.createElement("div");
+        div.className = "field";
+        div.innerHTML = `
+            <label>${escapeHtml(header)}</label>
+            <input data-header="${escapeHtml(header)}">
+        `;
+        grid.appendChild(div);
+    });
+
+    setReady("Ready");
+    document.getElementById("addDialog").showModal();
+}
+
+function closeAdd() {
+    document.getElementById("addDialog").close();
+}
+
+async function saveNewEntry() {
+    const sheet = document.getElementById("sheetSelect").value;
+    if (sheet === "ALL") {
+        alert("Please select a specific sheet first.");
+        return;
+    }
+
+    const fields = {};
+    let hasValue = false;
+
+    document.querySelectorAll("#addGrid input").forEach(input => {
+        fields[input.dataset.header] = input.value;
+        if (input.value.trim()) hasValue = true;
+    });
+
+    if (!hasValue) {
+        alert("Please enter at least one value.");
+        return;
+    }
+
+    setBusy("Adding new entry...");
+
+    const res = await fetch("/api/add", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            sheet: sheet,
+            fields: fields
+        })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+        setReady(data.error || "Add failed");
+        alert(data.error || "Add failed");
+        return;
+    }
+
+    closeAdd();
+    await loadRecords();
+    alert(`Added new row ${data.row_number} in ${data.sheet}. Backup created: ${data.backup}`);
+}
+
+
+async function deleteEntry(index) {
+    const record = currentRecords[index];
+
+    if (!record) {
+        alert("Record not found.");
+        return;
+    }
+
+    const msg = `Delete this entry?\n\nCable: ${record.cable_id || "Unknown"}\nSheet: ${record.sheet}\nRow: ${record.row_number}\n\nA backup will be created first.`;
+    if (!confirm(msg)) {
+        return;
+    }
+
+    setBusy("Deleting entry...");
+
+    const url = `/api/record/${encodeURIComponent(record.sheet)}/${record.row_number}`;
+    const res = await fetch(url, { method: "DELETE" });
+    const data = await res.json();
+
+    if (!res.ok) {
+        setReady(data.error || "Delete failed");
+        alert(data.error || "Delete failed");
+        return;
+    }
+
+    await loadRecords();
+    alert(`Deleted row ${data.row_number} from ${data.sheet}. Backup created: ${data.backup}`);
+}
+
+
+
+let unitMapOpen = false;
+let unitGraphData = null;
+let unitNodeById = {};
+let unitLinkById = {};
+let unitPos = {};
+let unitScaleNow = 1;
+let unitPanNow = {x:0, y:0};
+let unitSelectedNodeNow = null;
+let unitSelectedLinkNow = null;
+let dragNodeNow = null;
+let dragStartNow = null;
+let nodeStartNow = null;
+let panStartNow = null;
+let isPanningNow = false;
+let didMoveNow = false;
+
+function safeHtml(v) {
+    return String(v ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]);
+}
+
+function shortUnit(v, max=24) {
+    v = String(v || "Unknown");
+    return v.length > max ? v.slice(0, max-1) + "…" : v;
+}
+
+function rebuildUnitLookups() {
+    unitNodeById = {};
+    unitLinkById = {};
+    (unitGraphData?.nodes || []).forEach(n => unitNodeById[n.id] = n);
+    (unitGraphData?.links || []).forEach(l => unitLinkById[l.id] = l);
+}
+
+function openUnitMap() {
+    unitMapOpen = !unitMapOpen;
+    document.getElementById("records").style.display = unitMapOpen ? "none" : "";
+    document.getElementById("unitMap").style.display = unitMapOpen ? "" : "none";
+    if (unitMapOpen) loadUnitGraph(); else loadRecords();
+}
+
+async function loadUnitGraph() {
+    const q = document.getElementById("searchInput").value;
+    const sheet = document.getElementById("sheetSelect").value;
+    setBusy("Building Unit Map...");
+
+    const flow = document.getElementById("flowTypeFilter")?.value || "ALL";
+    const vlan = document.getElementById("vlanFilter")?.value || "";
+    const res = await fetch(`/api/unit-graph?q=${encodeURIComponent(q)}&sheet=${encodeURIComponent(sheet)}&flow_type=${encodeURIComponent(flow)}&vlan=${encodeURIComponent(vlan)}`);
+    const data = await res.json();
+
+    if (res.status === 202 || data.ready === false) {
+        setBusy("Cache still building...");
+        return;
+    }
+
+    unitGraphData = data;
+    rebuildUnitLookups();
+    unitPos = {};
+    unitScaleNow = 1;
+    unitPanNow = {x:0, y:0};
+    unitSelectedNodeNow = null;
+    unitSelectedLinkNow = null;
+
+    renderUnitGraph();
+    setReady(`${data.count} map connection(s) loaded`);
+}
+
+function renderUnitGraph() {
+    const root = document.getElementById("unitMap");
+    if (!unitGraphData || !unitGraphData.links.length) {
+        root.innerHTML = `<div class="empty">No map connections found.</div>`;
+        return;
+    }
+
+    root.innerHTML = `
+        <div class="unit-map-shell">
+            <aside class="unit-side" id="unitSourcePanel"><h3>Source Details</h3><div class="hint">Click a node or line.</div></aside>
+            <div class="unit-canvas" id="unitCanvas">
+                <div class="unit-controls">
+                    <button type="button" onclick="event.stopPropagation(); unitZoom(1.2)">+</button>
+                    <button type="button" onclick="event.stopPropagation(); unitZoom(0.85)">−</button>
+                    <button type="button" onclick="event.stopPropagation(); unitReset()">Reset</button>
+                    <button type="button" onclick="event.stopPropagation(); unitSortMap()">Sort Map</button>
+                </div>
+                <div class="unit-help">Click node for details. Click empty map to clear. Use Sort Map for a cleaner layout.</div>
+                <svg id="unitSvg" viewBox="0 0 1100 760" preserveAspectRatio="xMidYMid meet">
+                    <g id="unitViewport"></g>
+                </svg>
+                <div id="unitNodeLayer"></div>
+            </div>
+            <aside class="unit-side" id="unitDestPanel"><h3>Destination Details</h3><div class="hint">Click a node or line.</div></aside>
+        </div>
+    `;
+
+    unitSetupEvents();
+    unitDraw();
+    unitPanels();
+}
+
+function unitHash(s) {
+    let h = 0; s = String(s || "");
+    for (let i=0; i<s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+    return Math.abs(h);
+}
+
+function unitBuildPos(links) {
+    const ids = [...new Set(links.flatMap(l => [l.source, l.target]))];
+    const srcs = ids.filter(id => unitNodeById[id]?.kind === "source").sort((a,b)=>(unitNodeById[b].connections||0)-(unitNodeById[a].connections||0));
+    const dsts = ids.filter(id => unitNodeById[id]?.kind === "destination").sort((a,b)=>(unitNodeById[b].connections||0)-(unitNodeById[a].connections||0));
+
+    srcs.forEach((id,i) => {
+        if (unitPos[id]) return;
+        const h = unitHash(id);
+        unitPos[id] = {x: 110 + (i%3)*135 + (h%35), y: 80 + (Math.floor(i/3)*78)%620 + ((h>>2)%18)};
+    });
+    dsts.forEach((id,i) => {
+        if (unitPos[id]) return;
+        const h = unitHash(id);
+        unitPos[id] = {x: 720 + (i%3)*135 + (h%35), y: 80 + (Math.floor(i/3)*78)%620 + ((h>>2)%18)};
+    });
+    return unitPos;
+}
+
+function unitVisibleLinks() {
+    return unitGraphData.links.slice(0, 260);
+}
+
+function unitDraw() {
+    const vp = document.getElementById("unitViewport");
+    const nodeLayer = document.getElementById("unitNodeLayer");
+    if (!vp || !nodeLayer || !unitGraphData) return;
+
+    const links = unitVisibleLinks();
+    const pos = unitBuildPos(links);
+    const visibleIds = [...new Set(links.flatMap(l => [l.source, l.target]))];
+
+    let active = links;
+    if (unitSelectedNodeNow) active = links.filter(l => l.source === unitSelectedNodeNow || l.target === unitSelectedNodeNow);
+    if (unitSelectedLinkNow) active = links.filter(l => l.id === unitSelectedLinkNow);
+    const activeIds = new Set(active.map(l => l.id));
+    const selectedLink = unitSelectedLinkNow ? unitLinkById[unitSelectedLinkNow] : null;
+
+    const connected = new Set([unitSelectedNodeNow]);
+    if (unitSelectedNodeNow) links.forEach(l => {
+        if (l.source === unitSelectedNodeNow) connected.add(l.target);
+        if (l.target === unitSelectedNodeNow) connected.add(l.source);
+    });
+
+    let svgOut = `<defs><marker id="uArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#42b7ff"></path></marker></defs>`;
+
+    links.forEach(l => {
+        const s = pos[l.source], d = pos[l.target];
+        if (!s || !d) return;
+        let cls = "u-link";
+        if (unitSelectedNodeNow || unitSelectedLinkNow) cls += activeIds.has(l.id) ? " active" : " dim";
+        const curve = Math.max(90, Math.min(240, (d.x-s.x)*.35));
+        svgOut += `<path class="${cls}" data-id="${safeHtml(l.id)}" d="M ${s.x} ${s.y} C ${s.x+curve} ${s.y-20}, ${d.x-curve} ${d.y+20}, ${d.x} ${d.y}" marker-end="url(#uArrow)"></path>`;
+    });
+
+    vp.innerHTML = svgOut;
+
+    let htmlOut = "";
+    visibleIds.forEach(id => {
+        const n = unitNodeById[id], p = pos[id];
+        if (!n || !p) return;
+
+        let cls = `html-node ${n.kind}`;
+        if (unitSelectedNodeNow === id) cls += " selected";
+        if (unitSelectedNodeNow && !connected.has(id)) cls += " dim";
+        if (selectedLink) {
+            if (id === selectedLink.source || id === selectedLink.target) cls += " selected";
+            else cls += " dim";
+        }
+
+        const x = p.x * unitScaleNow + unitPanNow.x;
+        const y = p.y * unitScaleNow + unitPanNow.y;
+
+        htmlOut += `<div class="${cls}" data-id="${safeHtml(id)}" style="left:${x}px; top:${y}px">
+            ${safeHtml(shortUnit(n.label))}
+            <span class="small">${n.connections} connection(s)</span>
+        </div>`;
+    });
+
+    nodeLayer.innerHTML = htmlOut;
+    unitApplyTransform();
+}
+
+function unitApplyTransform() {
+    const vp = document.getElementById("unitViewport");
+    const nodeLayer = document.getElementById("unitNodeLayer");
+    if (vp) vp.setAttribute("transform", `translate(${unitPanNow.x},${unitPanNow.y}) scale(${unitScaleNow})`);
+
+    if (nodeLayer) {
+        const nodes = nodeLayer.querySelectorAll(".html-node");
+        nodes.forEach(el => {
+            const id = el.dataset.id;
+            const p = unitPos[id];
+            if (!p) return;
+            el.style.left = `${p.x * unitScaleNow + unitPanNow.x}px`;
+            el.style.top = `${p.y * unitScaleNow + unitPanNow.y}px`;
+        });
+    }
+}
+
+function unitRawPoint(e) {
+    const canvas = document.getElementById("unitCanvas");
+    const r = canvas.getBoundingClientRect();
+    return {x: (e.clientX - r.left) * (1100 / r.width), y: (e.clientY - r.top) * (760 / r.height)};
+}
+
+function unitGraphPoint(e) {
+    const p = unitRawPoint(e);
+    return {x: (p.x - unitPanNow.x)/unitScaleNow, y: (p.y - unitPanNow.y)/unitScaleNow};
+}
+
+function unitSetupEvents() {
+    const canvas = document.getElementById("unitCanvas");
+    const svg = document.getElementById("unitSvg");
+    const nodeLayer = document.getElementById("unitNodeLayer");
+
+    nodeLayer.addEventListener("pointerdown", e => {
+        const node = e.target.closest(".html-node");
+        if (!node) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        didMoveNow = false;
+        dragNodeNow = node.dataset.id;
+        dragStartNow = unitGraphPoint(e);
+        nodeStartNow = {...unitPos[dragNodeNow]};
+        node.setPointerCapture(e.pointerId);
+    });
+
+    nodeLayer.addEventListener("pointermove", e => {
+        if (!dragNodeNow) return;
+
+        e.preventDefault();
+        didMoveNow = true;
+        const p = unitGraphPoint(e);
+        unitPos[dragNodeNow] = {
+            x: nodeStartNow.x + (p.x - dragStartNow.x),
+            y: nodeStartNow.y + (p.y - dragStartNow.y)
+        };
+        unitDraw();
+    });
+
+    nodeLayer.addEventListener("pointerup", e => {
+        const node = e.target.closest(".html-node");
+
+        if (node && !didMoveNow) {
+            unitSelectNode(node.dataset.id);
+        }
+
+        dragNodeNow = null;
+    });
+
+    svg.addEventListener("click", e => {
+        const path = e.target.closest("path.u-link");
+        if (path && path.dataset.id) {
+            unitSelectLink(path.dataset.id);
+        }
+    });
+
+    canvas.addEventListener("pointerdown", e => {
+        if (e.target.closest(".unit-controls")) return;
+        if (e.target.closest(".html-node")) return;
+        if (e.target.closest("path.u-link")) return;
+
+        didMoveNow = false;
+        isPanningNow = true;
+        dragStartNow = unitRawPoint(e);
+        panStartNow = {...unitPanNow};
+        canvas.classList.add("dragging");
+        canvas.setPointerCapture(e.pointerId);
+    });
+
+    canvas.addEventListener("pointermove", e => {
+        if (!isPanningNow) return;
+
+        e.preventDefault();
+        didMoveNow = true;
+        const p = unitRawPoint(e);
+        unitPanNow = {
+            x: panStartNow.x + (p.x - dragStartNow.x),
+            y: panStartNow.y + (p.y - dragStartNow.y)
+        };
+        unitApplyTransform();
+    });
+
+    canvas.addEventListener("pointerup", e => {
+        if (isPanningNow && !didMoveNow && !e.target.closest(".html-node") && !e.target.closest("path.u-link")) {
+            unitClearSelection();
+        }
+
+        isPanningNow = false;
+        canvas.classList.remove("dragging");
+        try { canvas.releasePointerCapture(e.pointerId); } catch(err) {}
+    });
+
+    canvas.addEventListener("wheel", e => {
+        e.preventDefault();
+        unitZoom(e.deltaY < 0 ? 1.15 : 0.87);
+    }, {passive:false});
+}
+
+
+function unitSortMap() {
+    if (!unitGraphData) {
+        alert("Open the Unit Map first.");
+        return;
+    }
+
+    const links = unitVisibleLinks();
+    const visibleIds = [...new Set(links.flatMap(l => [l.source, l.target]))];
+
+    const sources = visibleIds
+        .filter(id => unitNodeById[id]?.kind === "source")
+        .sort((a, b) => {
+            const ca = unitNodeById[a]?.connections || 0;
+            const cb = unitNodeById[b]?.connections || 0;
+            if (cb !== ca) return cb - ca;
+            return String(unitNodeById[a]?.label || "").localeCompare(String(unitNodeById[b]?.label || ""));
+        });
+
+    const destinations = visibleIds
+        .filter(id => unitNodeById[id]?.kind === "destination")
+        .sort((a, b) => {
+            const ca = unitNodeById[a]?.connections || 0;
+            const cb = unitNodeById[b]?.connections || 0;
+            if (cb !== ca) return cb - ca;
+            return String(unitNodeById[a]?.label || "").localeCompare(String(unitNodeById[b]?.label || ""));
+        });
+
+    // Force a new clean layout.
+    unitPos = {};
+
+    const rowsPerColumn = 10;
+    const yStart = 78;
+    const yStep = 62;
+
+    sources.forEach((id, i) => {
+        const col = Math.floor(i / rowsPerColumn);
+        const row = i % rowsPerColumn;
+        unitPos[id] = {
+            x: 110 + col * 175,
+            y: yStart + row * yStep
+        };
+    });
+
+    destinations.forEach((id, i) => {
+        const col = Math.floor(i / rowsPerColumn);
+        const row = i % rowsPerColumn;
+        unitPos[id] = {
+            x: 990 - col * 175,
+            y: yStart + row * yStep
+        };
+    });
+
+    unitScaleNow = 1;
+    unitPanNow = {x: 0, y: 0};
+    unitSelectedNodeNow = null;
+    unitSelectedLinkNow = null;
+
+    unitDraw();
+    unitPanels();
+
+    setReady(`Map sorted: ${sources.length} sources and ${destinations.length} destinations`);
+}
+
+
+function unitZoom(factor) {
+    unitScaleNow = Math.max(0.25, Math.min(5, unitScaleNow * factor));
+    unitApplyTransform();
+}
+
+function unitReset() {
+    unitScaleNow = 1;
+    unitPanNow = {x:0, y:0};
+    unitApplyTransform();
+}
+
+function unitSelectNode(id) {
+    unitSelectedNodeNow = id;
+    unitSelectedLinkNow = null;
+    unitDraw();
+    unitPanels();
+}
+
+function unitSelectLink(id) {
+    unitSelectedLinkNow = id;
+    unitSelectedNodeNow = null;
+    unitDraw();
+    unitPanels();
+}
+
+function unitClearSelection() {
+    unitSelectedNodeNow = null;
+    unitSelectedLinkNow = null;
+    unitDraw();
+    unitPanels();
+}
+
+function unitPanels() {
+    const left = document.getElementById("unitSourcePanel");
+    const right = document.getElementById("unitDestPanel");
+    if (!left || !right || !unitGraphData) return;
+
+    if (unitSelectedLinkNow) {
+        const l = unitLinkById[unitSelectedLinkNow];
+        left.innerHTML = `<h3>Source Details</h3>${unitLinkDetail(l, "source")}`;
+        right.innerHTML = `<h3>Destination Details</h3>${unitLinkDetail(l, "destination")}`;
+        return;
+    }
+
+    if (unitSelectedNodeNow) {
+        const n = unitNodeById[unitSelectedNodeNow];
+        const links = unitGraphData.links.filter(l => l.source === unitSelectedNodeNow || l.target === unitSelectedNodeNow);
+
+        if (!n) {
+            left.innerHTML = `<h3>Source Details</h3><div class="unit-detail">Node not found.</div>`;
+            right.innerHTML = `<h3>Destination Details</h3><div class="unit-detail">Node not found.</div>`;
+            return;
+        }
+
+        if (n.kind === "source") {
+            left.innerHTML = unitNodeDetail(n, links, "source", "Selected Source");
+            right.innerHTML = `<h3>Connected Destinations</h3>` + links.map(l => unitLinkDetail(l, "destination")).join("");
+        } else {
+            left.innerHTML = `<h3>Connected Sources</h3>` + links.map(l => unitLinkDetail(l, "source")).join("");
+            right.innerHTML = unitNodeDetail(n, links, "destination", "Selected Destination");
+        }
+        return;
+    }
+
+    left.innerHTML = `<h3>Source Details</h3><div class="hint">Click a source node, destination node, or line.</div>`;
+    right.innerHTML = `<h3>Destination Details</h3><div class="hint">Click a source node, destination node, or line.</div>`;
+}
+
+function unitNodeDetail(n, links, side, title) {
+    const details = (n.details || []).length
+        ? n.details.map(d => `<div class="unit-detail">${safeHtml(d)}</div>`).join("")
+        : `<div class="unit-detail">No full details available.</div>`;
+
+    const related = links.length
+        ? links.map(l => unitLinkDetail(l, side)).join("")
+        : `<div class="unit-detail">No related connections.</div>`;
+
+    return `<h3>${safeHtml(title)}</h3>
+        <div class="unit-detail"><strong>Unit: ${safeHtml(n.label)}</strong><br>${n.connections} connection(s)</div>
+        <h3 style="margin-top:14px">Full Details</h3>
+        ${details}
+        <h3 style="margin-top:14px">Related Connections</h3>
+        ${related}`;
+}
+
+function unitLinkDetail(l, side) {
+    if (!l) return `<div class="unit-detail">No details</div>`;
+    const label = side === "source" ? l.source_label : l.target_label;
+    const details = side === "source" ? l.source_details : l.destination_details;
+
+    return `<div class="unit-detail" onclick="unitSelectLink('${safeHtml(l.id)}')" style="cursor:pointer">
+        <strong>Cable/CTA: ${safeHtml(l.cable_id || "Unknown")}</strong><br>
+        <b>Unit:</b> ${safeHtml(label || "")}<br>
+        ${safeHtml(details || "")}
+        ${l.network ? `<br><b>Network:</b> ${safeHtml(l.network)}` : ""}
+        ${l.notes ? `<br><b>Notes:</b> ${safeHtml(l.notes)}` : ""}
+        <br><span style="color:var(--muted)">${safeHtml(l.sheet)} / Row ${l.row_number}</span>
+    </div>`;
+}
+
+
+let opsDebounce = null;
+
+function filterParams() {
+    const q = document.getElementById("searchInput")?.value || "";
+    const sheet = document.getElementById("sheetSelect")?.value || "ALL";
+    const flow = document.getElementById("flowTypeFilter")?.value || "ALL";
+    const vlan = document.getElementById("vlanFilter")?.value || "";
+    return `q=${encodeURIComponent(q)}&sheet=${encodeURIComponent(sheet)}&flow_type=${encodeURIComponent(flow)}&vlan=${encodeURIComponent(vlan)}`;
+}
+
+function openOperationsPanel() {
+    const p = document.getElementById("operationsPanel");
+    p.style.display = p.style.display === "block" ? "none" : "block";
+    if (p.style.display === "block") {
+        runValidation();
+        loadFlowSummary();
+    }
+}
+
+function openDevicePanel() {
+    const p = document.getElementById("devicePanel");
+    p.style.display = p.style.display === "block" ? "none" : "block";
+    if (p.style.display === "block") loadDevices();
+}
+
+function refreshOpsDebounced() {
+    clearTimeout(opsDebounce);
+    opsDebounce = setTimeout(refreshOpsAndData, 350);
+}
+
+function refreshOpsAndData() {
+    if (document.getElementById("operationsPanel").style.display === "block") {
+        runValidation();
+        loadFlowSummary();
+    }
+    if (unitMapOpen) loadUnitGraph(); else loadRecords();
+}
+
+async function runValidation() {
+    setBusy("Running validation...");
+    const res = await fetch(`/api/validate?${filterParams()}`);
+    const data = await res.json();
+
+    const s = data.summary || {};
+    document.getElementById("validationSummary").innerHTML = `
+        <div class="big">${data.records_checked}</div> records checked<br>
+        <span class="badge red">Duplicate IPs: ${s.duplicate_ip_count}</span>
+        <span class="badge orange">Duplicate cables: ${s.duplicate_cable_count}</span>
+        <span class="badge orange">Missing fields: ${s.missing_count}</span>
+        <span class="badge red">Invalid IPs: ${s.invalid_ip_count}</span>
+    `;
+
+    let html = "";
+    (data.duplicate_ips || []).forEach(x => {
+        html += `<div class="unit-detail"><b>Duplicate IP:</b> ${safeHtml(x.ip)} (${x.count})<br>${x.items.map(i => `${safeHtml(i.sheet)} row ${i.row} cable ${safeHtml(i.cable)}`).join("<br>")}</div>`;
+    });
+    (data.duplicate_cables || []).forEach(x => {
+        html += `<div class="unit-detail"><b>Duplicate cable:</b> ${safeHtml(x.cable)} (${x.count})<br>${x.items.map(i => `${safeHtml(i.sheet)} row ${i.row}`).join("<br>")}</div>`;
+    });
+    (data.missing || []).slice(0,50).forEach(x => {
+        html += `<div class="unit-detail"><b>${safeHtml(x.type)}:</b> ${safeHtml(x.sheet)} row ${x.row} cable ${safeHtml(x.cable)}</div>`;
+    });
+    document.getElementById("validationIssues").innerHTML = html || `<span class="badge green">No issues found for current filter.</span>`;
+    setReady("Validation complete");
+}
+
+async function loadFlowSummary() {
+    const res = await fetch(`/api/flow-summary?${filterParams()}`);
+    const data = await res.json();
+
+    const ft = data.flow_types || {};
+    const vl = data.vlans || {};
+    let html = `<b>Flow Types</b><br>`;
+    Object.keys(ft).sort().forEach(k => html += `<span class="badge blue">${safeHtml(k)}: ${ft[k]}</span> `);
+    html += `<br><br><b>VLANs</b><br>`;
+    Object.keys(vl).sort((a,b)=>Number(a)-Number(b)).slice(0,50).forEach(k => html += `<span class="badge">${safeHtml(k)}: ${vl[k]}</span> `);
+    document.getElementById("flowSummary").innerHTML = html;
+}
+
+async function loadAudit() {
+    const res = await fetch("/api/audit?limit=200");
+    const data = await res.json();
+    document.getElementById("auditLog").innerHTML = (data.entries || []).map(e => `
+        <div class="unit-detail">
+            <b>${safeHtml(e.timestamp)}</b><br>
+            ${safeHtml(e.action)}<br>
+            <span style="color:var(--muted)">${safeHtml(JSON.stringify(e.details || {}))}</span>
+        </div>
+    `).join("") || "No audit entries yet.";
+}
+
+async function loadDevices() {
+    const res = await fetch("/api/devices");
+    const data = await res.json();
+    renderDevices(data.devices || []);
+}
+
+function renderDevices(devices) {
+    let html = `<table class="device-table"><tr><th>Name</th><th>IP</th><th>Role</th><th>Status</th><th></th></tr>`;
+    devices.forEach(d => {
+        html += `<tr>
+            <td>${safeHtml(d.name)}</td>
+            <td>${safeHtml(d.ip)}</td>
+            <td>${safeHtml(d.role)}</td>
+            <td class="status-${safeHtml(d.status || "no-ip")}">${safeHtml(d.status || "not checked")}</td>
+            <td><button onclick="deleteDevice('${safeHtml(d.id)}')">Delete</button></td>
+        </tr>`;
+    });
+    html += `</table>`;
+    document.getElementById("deviceList").innerHTML = html;
+}
+
+async function saveDevice() {
+    const payload = {
+        name: document.getElementById("devName").value,
+        ip: document.getElementById("devIp").value,
+        vendor: document.getElementById("devVendor").value,
+        role: document.getElementById("devRole").value,
+        site: document.getElementById("devSite").value,
+        ptp_domain: document.getElementById("devPtp").value,
+        primary_network: document.getElementById("devPrimary").value,
+        secondary_network: document.getElementById("devSecondary").value,
+        notes: document.getElementById("devNotes").value
+    };
+    const res = await fetch("/api/devices", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
+    const data = await res.json();
+    if (!res.ok) return alert(data.error || "Save failed");
+    await loadDevices();
+    alert("Device saved");
+}
+
+async function deleteDevice(id) {
+    if (!confirm("Delete this device?")) return;
+    await fetch(`/api/devices/${encodeURIComponent(id)}`, {method:"DELETE"});
+    await loadDevices();
+}
+
+async function checkDeviceStatus() {
+    setBusy("Checking device status...");
+    const res = await fetch("/api/status-check");
+    const data = await res.json();
+    renderDevices(data.devices || []);
+    setReady("Device status check complete");
+}
+
+async function openNmosConfig() {
+    const res = await fetch("/api/nmos-config");
+    const data = await res.json();
+    document.getElementById("nmosRegistryUrl").value = data.registry_url || "";
+    document.getElementById("nmosNotes").value = data.notes || "";
+    document.getElementById("nmosEnabled").checked = !!data.enabled;
+    document.getElementById("nmosDialog").showModal();
+}
+
+async function saveNmosConfig() {
+    const payload = {
+        registry_url: document.getElementById("nmosRegistryUrl").value,
+        notes: document.getElementById("nmosNotes").value,
+        enabled: document.getElementById("nmosEnabled").checked
+    };
+    const res = await fetch("/api/nmos-config", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
+    const data = await res.json();
+    alert(data.status === "saved" ? "NMOS config saved" : "Failed");
+}
+
+async function previewNmos() {
+    const res = await fetch("/api/nmos-preview");
+    const data = await res.json();
+    document.getElementById("nmosPreview").textContent = JSON.stringify(data, null, 2);
+}
+
+
+
+let CURRENT_USER = null;
+
+async function loadMe() {
+    const res = await fetch("/api/me");
+    if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+    }
+    CURRENT_USER = await res.json();
+    document.getElementById("currentUserBadge").textContent = `${CURRENT_USER.username} (${CURRENT_USER.role})`;
+
+    if (CURRENT_USER.can_admin) {
+        document.getElementById("adminUsersBtn").style.display = "";
+    }
+
+    if (!CURRENT_USER.can_write) {
+        document.querySelectorAll("button").forEach(btn => {
+            const text = (btn.textContent || "").toLowerCase();
+            const forbidden = ["add entry", "import missing", "reload xlsx", "operations", "devices"];
+            if (forbidden.some(x => text.includes(x))) {
+                btn.style.display = "none";
+            }
+        });
+    }
+
+    if (CURRENT_USER.must_change_password) {
+        setTimeout(() => {
+            alert("You are using a temporary/default password. Please change it now.");
+            openChangePassword();
+        }, 500);
+    }
+}
+
+function openChangePassword() {
+    document.getElementById("changePasswordDialog").showModal();
+}
+
+async function changePassword() {
+    const payload = {
+        old_password: document.getElementById("oldPassword").value,
+        new_password: document.getElementById("newPasswordChange").value
+    };
+    const res = await fetch("/api/change-password", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        alert(data.error || "Password change failed");
+        return;
+    }
+    alert("Password changed");
+    document.getElementById("changePasswordDialog").close();
+    await loadMe();
+}
+
+async function openAdminUsers() {
+    document.getElementById("adminUsersDialog").showModal();
+    await loadUsers();
+}
+
+async function loadUsers() {
+    const res = await fetch("/api/users");
+    const data = await res.json();
+    if (!res.ok) {
+        document.getElementById("usersList").innerHTML = data.error || "Failed to load users";
+        return;
+    }
+
+    let html = `<table class="device-table"><tr><th>User</th><th>Role</th><th>Temp Password</th><th>Created</th><th>Actions</th></tr>`;
+    (data.users || []).forEach(u => {
+        html += `<tr>
+            <td>${safeHtml(u.username)}</td>
+            <td>
+                <select onchange="changeUserRole('${safeHtml(u.username)}', this.value)">
+                    <option value="read" ${u.role === "read" ? "selected" : ""}>read</option>
+                    <option value="write" ${u.role === "write" ? "selected" : ""}>write</option>
+                    <option value="admin" ${u.role === "admin" ? "selected" : ""}>admin</option>
+                </select>
+            </td>
+            <td>${u.must_change_password ? "Yes" : "No"}</td>
+            <td>${safeHtml(u.created_at || "")}</td>
+            <td><button onclick="deleteUser('${safeHtml(u.username)}')">Delete</button></td>
+        </tr>`;
+    });
+    html += `</table>`;
+    document.getElementById("usersList").innerHTML = html;
+}
+
+async function createUser() {
+    const payload = {
+        username: document.getElementById("newUsername").value,
+        password: document.getElementById("newPassword").value,
+        role: document.getElementById("newUserRole").value
+    };
+    const res = await fetch("/api/users", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        alert(data.error || "Create user failed");
+        return;
+    }
+    document.getElementById("newUsername").value = "";
+    document.getElementById("newPassword").value = "";
+    await loadUsers();
+    alert("User created");
+}
+
+async function deleteUser(username) {
+    if (!confirm(`Delete user ${username}?`)) return;
+    const res = await fetch(`/api/users/${encodeURIComponent(username)}`, {method: "DELETE"});
+    const data = await res.json();
+    if (!res.ok) {
+        alert(data.error || "Delete failed");
+        return;
+    }
+    await loadUsers();
+}
+
+async function changeUserRole(username, role) {
+    const res = await fetch(`/api/users/${encodeURIComponent(username)}/role`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({role})
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        alert(data.error || "Role update failed");
+        await loadUsers();
+        return;
+    }
+}
+
+
+loadMe();
+checkStatus();
+</script>
+</body>
+</html>

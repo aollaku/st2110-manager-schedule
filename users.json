@@ -1,0 +1,9 @@
+[
+  {
+    "username": "admin",
+    "password_hash": "scrypt:32768:8:1$hkdGblbbHTmlkraI$a99d9cf36ff3e95811914063f121e2df7bd52dbb24b7fd01e517f99aa1d1f630d84f7304b2cafa110df42d24612d18632eb5de0a071c0027475d93572c14e686",
+    "role": "admin",
+    "must_change_password": false,
+    "created_at": "2026-05-24 00:03:52"
+  }
+]

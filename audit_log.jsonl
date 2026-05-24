@@ -1,0 +1,2 @@
+{"timestamp": "2026-05-24 00:03:55", "action": "login", "details": {"username": "admin"}}
+{"timestamp": "2026-05-24 00:04:07", "action": "password_changed", "details": {"username": "admin"}}
